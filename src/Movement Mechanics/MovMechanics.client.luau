@@ -5,6 +5,7 @@ local JumpDebounce = false
 local Flying = false
 local DoubleJumpTime = 0.5 -- Time in seconds within which the second jump must occur
 local FlyConnection = nil
+local LastTimeJumpRequest = 0
 
 
 local function StartFly()
@@ -25,6 +26,14 @@ local function EndFly()
 end
 
 local function OnJumpRequest()
+
+    if LastTimeJumpRequest + 0.25 < time() then
+        return
+    end
+
+    LastTimeJumpRequest = time()
+
+    print("OnJumpRequest",LastTimeJumpRequest)
 
     if Flying then
         EndFly()
