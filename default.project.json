@@ -4,8 +4,8 @@
     "$className": "DataModel",
 
     "ReplicatedStorage": {
-      "Shared": {
-        "$path": "src/shared"
+      "Modules": {
+        "$path": "src/Modules"
       }
     },
 
@@ -16,12 +16,14 @@
     },
 
     "StarterPlayer": {
-      "StarterPlayerScripts": {
-        "Client": {
-          "$path": "src/client"
-        },
+      "StarterCharacterScripts": {
         "Movement Mechanics": {
           "$path": "src/Movement Mechanics"
+        }
+      },
+      "StarterPlayerScripts": {
+        "Movement Mechanics": {
+          "$path": "src/StarterPlayerScripts"
         }
       }
     },
