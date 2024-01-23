@@ -13,15 +13,14 @@ function HitboxManager.new()
 
     self.HitboxMode = "BasePart" -- BasePart, Raycast(Could be spherecast, spahecast or blockcast etc.)
 
-    self.DetectionMode = "Multi" -- Multi (Can hit several humanoids and get deleted after the duration), Single (Can hit only one humanoid and get deleted after the first hit)
-    self.Visualizer = true  -- Doesn't suggest in-game
+    self.DetectionMode = "Multi" -- Multi (Can hit several humanoids but only hits one time to each humanoid), Single (Can hit only one humanoid and get deleted after the first hit), Constant (Hits too fast(0.06 seconds) and too much time and too much humanoids)
+    self.Visualize = true  -- Doesn't suggest in-game
     self.AutoDestroy = true -- Think about it
     self.HitList = {}
     self.TouchingParts = {}
     self.Connections = {}
     
     self.Touched = GoodSignal.new()
-    self.ToucheEnded = GoodSignal.new()
 
     self.OverlapParams = OverlapParams.new()
 
@@ -30,10 +29,11 @@ function HitboxManager.new()
     self.CFrame = CFrame.new(0, 0, 0)
     self.Position = Vector3.new(0, 0, 0)
 
-    self.Duration = 1
+    self.Duration = 10
 
     self.Shape = Enum.PartType.Block --Or you can use Enum.PartType.Ball
 
+    self.CreatedTime = time()
 
     return self
 end
@@ -47,10 +47,6 @@ local Get_CFrame = {
     end
 }
 
-local ShapeName = {
-    [Enum.PartType.Block] = "Block",
-    [Enum.PartType.Ball] = "Ball",
-}
 
 local BasePart_Hitbox = {
     
@@ -83,22 +79,21 @@ local BasePart_Hitbox = {
 
 function HitboxManager:Visualize_BasePart()
 
-    local CFrame = Get_CFrame[typeof(self.CFrame)](self.CFrame)
-
-    local Visualizer = Instance.new("Part")
-    Visualizer.Color = Color3.fromRGB(255, 0, 0)
-    Visualizer.Shape = self.Shape
-    Visualizer.Size = self.Size
-    Visualizer.CFrame = CFrame
-    Visualizer.Parent = workspace.Terrain
-    Visualizer.CanCollide , Visualizer.CanTouch, Visualizer.CanQuery = false, false, false
-    Visualizer.Transparency = 0.5
-
-    self.Visualizer = Visualizer
-
-    self.Connections["Visualizer"] = RunService.Heartbeat:Connect(function()
+   if not self.Visualizer then
+        local Visualizer = Instance.new("Part")
+        Visualizer.Color = Color3.fromRGB(255, 0, 0)
+        Visualizer.Shape = self.Shape
+        Visualizer.Size = self.Size
         Visualizer.CFrame = Get_CFrame[typeof(self.CFrame)](self.CFrame)
-    end)
+        Visualizer.Parent = workspace.Terrain
+        Visualizer.CanCollide , Visualizer.CanTouch, Visualizer.CanQuery = false, false, false
+        Visualizer.Transparency = 0.5
+
+        self.Visualizer = Visualizer
+
+    else
+        self.Visualizer.CFrame = Get_CFrame[typeof(self.CFrame)](self.CFrame)
+   end
 
 end
 
@@ -117,6 +112,16 @@ function HitboxManager:Hitboxing_BasePart()
     local DetectionMode = self.DetectionMode
     local BoundingParts = BasePart_Hitbox[self.Shape](self)
 
+    task.spawn(function()
+        
+        self.Connections["RunService_TimeChecker"] = RunService.Heartbeat:Connect(function()
+            if self.CreatedTime + self.Duration < time() then
+                self:Stop_Hitboxing_BasePart()
+            end
+        end)
+
+    end)
+
     for _, Part in pairs(BoundingParts) do
 
         local Character = Part:FindFirstAncestorOfClass("Model") or Part.Parent
@@ -130,19 +135,13 @@ function HitboxManager:Hitboxing_BasePart()
 
 end
 
-function HitboxManager:Add_HitList(Humanoid)
-    
-    local Character_Name = Humanoid.Parent.Name
-
-    self.HitList[Character_Name] = Humanoid
-    
-end
-
 HitboxManager.DetectionMode_Functions = {
-    ["Multi"] = function(self, Humanoid, Part)
+    ["Constant"] = function(self, Humanoid, Part)
 
         self:Add_Touching_Parts(Part)
-        self:Add_HitList(Humanoid)
+        
+        local Character_Name = Humanoid.Parent.Name
+        self.HitList[Character_Name] = Humanoid
 
         self.Touched:Fire(Part, Humanoid)
 
@@ -151,17 +150,78 @@ HitboxManager.DetectionMode_Functions = {
     ["Single"] = function(self, Humanoid, Part)
 
         self:Add_Touching_Parts(Part)
-        self:Add_HitList(Humanoid)
+
+        local Character_Name = Humanoid.Parent.Name
+        self.HitList[Character_Name] = Humanoid
 
         self.Touched:Fire(Part, Humanoid)
 
         self:Stop_Hitboxing_BasePart()
 
         --You would need to break loop if the detection mode is Single, check it later
+    end,
+
+    ["Multi"] = function(self, Humanoid, Part)
+
+        self:Add_Touching_Parts(Part)
+
+        local Character_Name = Humanoid.Parent.Name
+        if table.find(self.HitList, Character_Name) then
+            return
+        else
+            self.HitList[Character_Name] = Humanoid
+        end
+
+        self.Touched:Fire(Part, Humanoid)
+        
     end
 
+
 }
-    
+
+function HitboxManager:Start_Hitboxing_BasePart()
+
+    task.spawn(function()
+        self.Connections["BasePart_Hitboxing"] = RunService.Heartbeat:Connect(function()
+            
+            self:Hitboxing_BasePart()
+            if self.Visualize then
+                self:Visualize_BasePart()
+            end
+
+        end)
+
+    end)
+
+end
+
+
+function HitboxManager:Stop_Hitboxing_BasePart()
+
+    self:Clear()
+
+    self.Touched:DisConnectAll()
+
+    setmetatable(self, nil)
+
+end
+
+
+
+function HitboxManager:Clear()
+
+    self.HitList = {}
+
+    for _, Connection in pairs(self.Connections) do
+        Connection:DisConnect()
+    end
+
+    if self.Visualizer then
+        self.Visualizer:Destroy()
+        self.Visualizer = nil
+    end
+
+end
 
 
 

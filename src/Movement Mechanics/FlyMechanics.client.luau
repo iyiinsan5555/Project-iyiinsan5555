@@ -57,7 +57,7 @@ local function EndFly()
     FlyConnection = nil
     Flying = false
 
-    CustomInstanceCreator:EditInstance("VectorForceForFlying", "Enabled", false)
+    CustomInstanceCreator:EditInstance("LinearVelocityForFlying", "Enabled", false)
     CustomInstanceCreator:EditInstance("AlignOrientationForFlying", "Enabled", false)
 
     Humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
