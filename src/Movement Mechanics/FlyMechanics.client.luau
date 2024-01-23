@@ -14,30 +14,38 @@ local Character = script.Parent.Parent --Just get the character, could change la
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 local Humanoid = Character:WaitForChild("Humanoid")
 
+local Camera = workspace:WaitForChild("Camera")
+
 
 local function StartFly()
     print("StartFly")
 
     Flying = true
 
-    local VectorForce :VectorForce = CustomInstanceCreator:CreateInstance("VectorForce", "VectorForceForFlying", HumanoidRootPart)
-    VectorForce.Attachment0 = HumanoidRootPart.RootRigAttachment
-    VectorForce.RelativeTo = Enum.ActuatorRelativeTo.World
-    VectorForce.Force = Vector3.new(0, 5000, 0)
+    local LinearVelocity :LinearVelocity = CustomInstanceCreator:CreateInstance("LinearVelocity", "LinearVelocityForFlying", HumanoidRootPart)
+    LinearVelocity.Attachment0 = HumanoidRootPart.RootRigAttachment
+    LinearVelocity.ForceLimitsEnabled = false
+	LinearVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+    LinearVelocity.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+    LinearVelocity.VectorVelocity = Vector3.new(0, 10, 0)
 
     local AlignOrientation :AlignOrientation = CustomInstanceCreator:CreateInstance("AlignOrientation", "AlignOrientationForFlying", HumanoidRootPart)
-    AlignOrientation.MaxTorque = math.huge
+    AlignOrientation.RigidityEnabled = false
     AlignOrientation.MaxAngularVelocity = math.huge
-    AlignOrientation.Responsiveness = 30
+    AlignOrientation.MaxTorque = math.huge
     AlignOrientation.Attachment0 = HumanoidRootPart.RootRigAttachment
     AlignOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
 
-    VectorForce.Enabled = true
+    LinearVelocity.Enabled = true
+    AlignOrientation.Enabled = true
 
     Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 
-    FlyConnection = RunService.Heartbeat:Connect(function(DeltaTime)
-        print(DeltaTime, "Flying")
+    FlyConnection = RunService.Heartbeat:Connect(function()
+        print("Flying")
+
+        AlignOrientation.CFrame = Camera.CFrame
+
     end)
 
 end

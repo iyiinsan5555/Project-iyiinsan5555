@@ -1,6 +1,5 @@
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
-local Camera = game:GetService("Workspace").CurrentCamera
 
 local Player = Players.LocalPlayer
 local Character = Player.Character or Player.CharacterAdded:Wait()
@@ -15,7 +14,7 @@ local LerpAmount = 0.25
 
 
 
-RunService:BindToRenderStep("CameraMovement", Enum.RenderPriority.Camera.Value + 1, function(DeltaTime)
+RunService:BindToRenderStep("CameraMovement", Enum.RenderPriority.Camera.Value + 1, function()
 
     local t = tick()
     local sinOffset = Vector3.new(math.sin(t * 2) * 0.1, math.sin(t * 2.5) * 0.1, math.sin(t * 3) * 0.1)
