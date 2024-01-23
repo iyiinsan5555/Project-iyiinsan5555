@@ -33,7 +33,7 @@ function HitboxManager.new()
 
     self.Shape = Enum.PartType.Block --Or you can use Enum.PartType.Ball
 
-    self.CreatedTime = time()
+    self.StartTime = time()
 
     return self
 end
@@ -80,6 +80,7 @@ local BasePart_Hitbox = {
 function HitboxManager:Visualize_BasePart()
 
    if not self.Visualizer then
+
         local Visualizer = Instance.new("Part")
         Visualizer.Color = Color3.fromRGB(255, 0, 0)
         Visualizer.Shape = self.Shape
@@ -88,6 +89,7 @@ function HitboxManager:Visualize_BasePart()
         Visualizer.Parent = workspace.Terrain
         Visualizer.CanCollide , Visualizer.CanTouch, Visualizer.CanQuery = false, false, false
         Visualizer.Transparency = 0.5
+        Visualizer.Anchored = true
 
         self.Visualizer = Visualizer
 
@@ -112,20 +114,10 @@ function HitboxManager:Hitboxing_BasePart()
     local DetectionMode = self.DetectionMode
     local BoundingParts = BasePart_Hitbox[self.Shape](self)
 
-    task.spawn(function()
-        
-        self.Connections["RunService_TimeChecker"] = RunService.Heartbeat:Connect(function()
-            if self.CreatedTime + self.Duration < time() then
-                self:Stop_Hitboxing_BasePart()
-            end
-        end)
-
-    end)
-
     for _, Part in pairs(BoundingParts) do
 
         local Character = Part:FindFirstAncestorOfClass("Model") or Part.Parent
-        local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+        local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
 
         if Humanoid then
             HitboxManager.DetectionMode_Functions[DetectionMode](self, Humanoid, Part)
@@ -137,7 +129,7 @@ end
 
 HitboxManager.DetectionMode_Functions = {
     ["Constant"] = function(self, Humanoid, Part)
-
+        print("Constant")
         self:Add_Touching_Parts(Part)
         
         local Character_Name = Humanoid.Parent.Name
@@ -148,7 +140,7 @@ HitboxManager.DetectionMode_Functions = {
     end,
 
     ["Single"] = function(self, Humanoid, Part)
-
+        print("Single")
         self:Add_Touching_Parts(Part)
 
         local Character_Name = Humanoid.Parent.Name
@@ -162,7 +154,7 @@ HitboxManager.DetectionMode_Functions = {
     end,
 
     ["Multi"] = function(self, Humanoid, Part)
-
+        print("Multi")
         self:Add_Touching_Parts(Part)
 
         local Character_Name = Humanoid.Parent.Name
@@ -173,7 +165,7 @@ HitboxManager.DetectionMode_Functions = {
         end
 
         self.Touched:Fire(Part, Humanoid)
-        
+
     end
 
 
@@ -181,12 +173,20 @@ HitboxManager.DetectionMode_Functions = {
 
 function HitboxManager:Start_Hitboxing_BasePart()
 
+    self.StartTime = time()
+
     task.spawn(function()
         self.Connections["BasePart_Hitboxing"] = RunService.Heartbeat:Connect(function()
-            
+
+            print(11)
+
             self:Hitboxing_BasePart()
             if self.Visualize then
                 self:Visualize_BasePart()
+            end
+
+            if self.StartTime + self.Duration < time() then
+                self:Stop_Hitboxing_BasePart()
             end
 
         end)
@@ -198,11 +198,16 @@ end
 
 function HitboxManager:Stop_Hitboxing_BasePart()
 
+    print(self)
+    self.Touched:DisconnectAll()
+
+    self.Visualizer.Color  = Color3.fromRGB(0, 0, 0)
+
     self:Clear()
 
-    self.Touched:DisConnectAll()
+    print(self)
 
-    setmetatable(self, nil)
+    --setmetatable(self, nil)
 
 end
 
@@ -213,14 +218,18 @@ function HitboxManager:Clear()
     self.HitList = {}
 
     for _, Connection in pairs(self.Connections) do
-        Connection:DisConnect()
+        Connection:Disconnect()
+        print(tostring(Connection).." disconnected")
     end
 
     if self.Visualizer then
+        print(self.Visualizer.CFrame)
+        print("Self.Visualizer Destroyed")
+        self.Visualizer.Parent = nil
         self.Visualizer:Destroy()
         self.Visualizer = nil
     end
-
+    print(self.Visualizer)
 end
 
 

@@ -23,6 +23,6 @@ RunService:BindToRenderStep("CameraMovement", Enum.RenderPriority.Camera.Value +
         sinOffset = Vector3.new(math.sin(t * 2.5) * 0.25, math.sin(t * 2.5) * 0.2, math.sin(t * 2) * 0.25)
     end
 
-    Humanoid.CameraOffset = Humanoid.CameraOffset:Lerp((Humanoid.MoveDirection * 1 ) + sinOffset, LerpAmount)
+    Humanoid.CameraOffset = Humanoid.CameraOffset:Lerp((Humanoid.MoveDirection * 0.5 ) + sinOffset, LerpAmount)
 
 end)
