@@ -10,7 +10,7 @@ Hitbox.CFrame = CFrame.new(Vector3.new(0, 17, 0)) * CFrame.Angles(0, math.rad(90
 Hitbox.Size = Vector3.new(10, 10, 10)
 Hitbox.DetectionMode = "Single"
 
-Hitbox:Start_Hitboxing_BasePart()
+Hitbox:Start()
 
 Hitbox.Touched:Connect(function(HitPart, Humanoid)
     print(HitPart, Humanoid)
@@ -35,8 +35,13 @@ New_Hitbox.Size = Vector3.new(10, 10, 10)
 New_Hitbox.DetectionMode = "Constant"
 New_Hitbox.Duration = math.huge
 
-New_Hitbox:Start_Hitboxing_BasePart()
+New_Hitbox:Start()
 
 New_Hitbox.Touched:Connect(function(HitPart, Humanoid)
     Humanoid:TakeDamage(1)
 end)
+
+task.wait(10)
+
+local StoredData = New_Hitbox:Destroy()
+print(StoredData)

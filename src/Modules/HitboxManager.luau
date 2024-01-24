@@ -1,13 +1,19 @@
 --Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
+local PlayerService = game:GetService("Players")
 
 --Modules 
 local GoodSignal = require(ReplicatedStorage.Modules.GoodSignal)
 
 local HitboxManager = {}
 HitboxManager.__index = HitboxManager
+
+HitboxManager.DetectionModes = {
+    ["Multi"] = "Multi",
+    ["Single"] = "Single",
+    ["Constant"] = "Constant"
+}
 
 function HitboxManager.new()
     local self = setmetatable({}, HitboxManager)
@@ -16,9 +22,8 @@ function HitboxManager.new()
 
     self.DetectionMode = "Multi" -- Multi (Can hit several humanoids but only hits one time to each humanoid), Single (Can hit only one humanoid and get deleted after the first hit), Constant (Hits too fast(0.06 seconds) and too much time and too much humanoids)
     self.Visualize = true  -- Doesn't suggest in-game
-    self.AutoDestroy = true -- Think about it
-    self.HitList = {}
-    self.TouchingParts = {}
+    self.PlayerHitList = {}
+    self.CurrentlyTouchingParts = {}
     self.Connections = {}
 
     self.Touched = GoodSignal.new()
@@ -26,11 +31,10 @@ function HitboxManager.new()
     self.OverlapParams = OverlapParams.new()
 
     self.Size = Vector3.new(1, 1, 1) or 1
-    self.Position = Vector3.new(0, 0, 0)
     self.CFrame = CFrame.new(0, 0, 0)
     self.Position = Vector3.new(0, 0, 0)
 
-    self.Duration = 10
+    self.Duration = math.huge
 
     self.Shape = Enum.PartType.Block --Or you can use Enum.PartType.Ball
 
@@ -39,55 +43,50 @@ function HitboxManager.new()
     self.States = {
         ["Ready"] = true,
         ["Running"] = false,
-        ["Stopping"] = false,
-        ["Stopped"] = false,
+        ["Destroying"] = false,
+        ["Destroyed"] = false,
     }
 
     return self
 end
 
 
-
-local Get_CFrame = {
-    ["Instance"] = function(Instance)
-        return Instance.CFrame
-    end,
-    ["CFrame"] = function(cframe)
-        return cframe
+function GetCFrame(self_CFrame)
+    if typeof(self_CFrame) == "Instance" then
+        return self_CFrame.CFrame
+    elseif typeof(self_CFrame) == "CFrame" then
+        return self_CFrame
     end
-}
+end
 
 
-local BasePart_Hitbox = {
-    
-    [Enum.PartType.Block] = function(self)
 
-        local Goal_CFrame = Get_CFrame[typeof(self.CFrame)](self.CFrame)
+function HitboxManager:GetBoundingParts(Shape)
 
-        local BoundingParts = workspace:GetPartBoundsInBox(Goal_CFrame, self.Size, self.OverlapParams)
+    if Shape == Enum.PartType.Block then
+
+        local LastCFrame = GetCFrame(self.CFrame)
+        local BoundingParts = workspace:GetPartBoundsInBox(LastCFrame, self.Size, self.OverlapParams)
 
         return BoundingParts
-        
-    end,
 
-    [Enum.PartType.Ball] = function(self)
-
-        local Goal_CFrame = Get_CFrame[typeof(self.CFrame)](self.CFrame)
+    elseif Shape == Enum.PartType.Ball then
 
         if typeof(self.Size) == "Vector3" then
-            warn("You need to give number for size, if you want to use Ball shape")
+            warn("You need to give number for size, if you want to use Ball shape. Currently calculating near value(Don't forget and don't use Vector3 for ball shape)")
+            self.Size = self.Size.Magnitude
         end
 
-        local BoundingParts = workspace:GetPartBoundsInRadius(Goal_CFrame.Position, self.Size, self.OverlapParams)
+        local LastCFrame = GetCFrame(self.CFrame)
+        local BoundingParts = workspace:GetPartBoundsInRadius(LastCFrame, self.Size, self.OverlapParams)
 
         return BoundingParts
-        
-    end,
+    end
 
-}
+end
 
 
-function HitboxManager:Get_State()
+function HitboxManager:GetState()
 
     local States = self.States
 
@@ -100,16 +99,16 @@ function HitboxManager:Get_State()
 
     end
 
-    print("No state found")
+    error("No state found")
     return false
 
 end
 
-function HitboxManager:Change_State(State :string)
+function HitboxManager:ChangeState(State :string)
 
     if self.States[State] ~= nil then
-        for k in pairs(self.States) do
-            self.States[k] = false
+        for Key in pairs(self.States) do
+            self.States[Key] = false
         end
         self.States[State] = true
     else
@@ -119,7 +118,7 @@ function HitboxManager:Change_State(State :string)
 end
 
 
-function HitboxManager:Visualize_BasePart()
+function HitboxManager:VisualizeBasePart()
 
    if not self.Visualizer then
 
@@ -127,8 +126,8 @@ function HitboxManager:Visualize_BasePart()
         Visualizer.Color = Color3.fromRGB(255, 0, 0)
         Visualizer.Shape = self.Shape
         Visualizer.Size = self.Size
-        Visualizer.CFrame = Get_CFrame[typeof(self.CFrame)](self.CFrame)
-        Visualizer.Parent = workspace   
+        Visualizer.CFrame = GetCFrame(self.CFrame)
+        Visualizer.Parent = workspace.Terrain
         Visualizer.CanCollide , Visualizer.CanTouch, Visualizer.CanQuery = false, false, false
         Visualizer.Transparency = 0.5
         Visualizer.Anchored = true
@@ -136,11 +135,11 @@ function HitboxManager:Visualize_BasePart()
         self.Visualizer = Visualizer
 
     else
-        self.Visualizer.CFrame = Get_CFrame[typeof(self.CFrame)](self.CFrame)
+        self.Visualizer.CFrame = GetCFrame(self.CFrame)
    end
 
-    if not self:Get_State() == "Running" then
-        warn("Can't visualize basepart, because hitbox isn't running")
+    if not (self:GetState() == "Running") then
+        --warn("Can't visualize basepart, because hitbox isn't running")
 
         if self.Visualizer then
             self.Visualizer:Destroy()
@@ -152,125 +151,136 @@ function HitboxManager:Visualize_BasePart()
 end
 
 
-function HitboxManager:Add_Touching_Parts(Part) -- Rewrite
+function HitboxManager:AddTouchingParts(BoundingParts :table)
 
-    if not table.find(self.TouchingParts, Part) then
-        table.insert(self.TouchingParts, Part)
-    end
+    self.TouchingParts = BoundingParts
 
 end
 
 
-function HitboxManager:Hitboxing_BasePart()
+function HitboxManager:FireTouching()
 
-    local DetectionMode = self.DetectionMode
-    local BoundingParts = BasePart_Hitbox[self.Shape](self)
+    local BoundingParts = self:GetBoundingParts(self.Shape)
 
     for _, Part in pairs(BoundingParts) do
 
         local Character = Part:FindFirstAncestorOfClass("Model") or Part.Parent
         local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
 
+        self:AddTouchingParts(BoundingParts)
+
         if Humanoid then
-            HitboxManager.DetectionMode_Functions[DetectionMode](self, Humanoid, Part)
+            self:Hitboxing(Part, Humanoid)
         end
 
     end
 
 end
 
-HitboxManager.DetectionMode_Functions = {
-    ["Constant"] = function(self, Humanoid, Part)
-        print("Constant")
-        --self:Add_Touching_Parts(Part)
+function HitboxManager:AddToPlayerHitList(PlayerName :string)
 
-        local Character_Name = Humanoid.Parent.Name
-        self.HitList[Character_Name] = Humanoid
+    local PlayerHitList = self.PlayerHitList
+    
+    if not table.find(PlayerHitList, PlayerName) then
+        table.insert(PlayerHitList, PlayerName)
+    end
 
-        self.Touched:Fire(Part, Humanoid)
+end
 
-    end,
 
-    ["Single"] = function(self, Humanoid, Part)
-        print("Single")
-        --self:Add_Touching_Parts(Part)
+function HitboxManager:Hitboxing(HitPart, Humanoid)
 
-        local Character_Name = Humanoid.Parent.Name
-        self.HitList[Character_Name] = Humanoid
+    local DetectionMode = self.DetectionMode
+    local Character = Humanoid.Parent
+    local Player = PlayerService:GetPlayerFromCharacter(Character)
+    local PlayerName = Player.Name
 
-        self.Touched:Fire(Part, Humanoid)
+    if DetectionMode == "Single" then
 
-        self:Stop_Hitboxing_BasePart()
+        self:AddToPlayerHitList(PlayerName)
 
-        --You would need to break loop if the detection mode is Single, check it later
-    end,
+        self.Touched:Fire(HitPart, Humanoid)
 
-    ["Multi"] = function(self, Humanoid, Part)
-        print("Multi")
-        --self:Add_Touching_Parts(Part)
+        self:Destroy()
 
-        local Character_Name = Humanoid.Parent.Name
-        if table.find(self.HitList, Character_Name) then
+    elseif DetectionMode == "Multi" then
+
+        if table.find(self.PlayerHitList, PlayerName) then
             return
         else
-            self.HitList[Character_Name] = Humanoid
+            self:AddToPlayerHitList(PlayerName)
         end
 
-        self.Touched:Fire(Part, Humanoid)
+        self.Touched:Fire(HitPart, Humanoid)
+
+    elseif DetectionMode == "Constant" then
+
+        self:AddToPlayerHitList(PlayerName)
+
+        self.Touched:Fire(HitPart, Humanoid)
 
     end
 
+end
 
-}
-
-function HitboxManager:Start_Hitboxing_BasePart()
+function HitboxManager:Start()
 
     self.StartTime = time()
-    self:Change_State("Running")
+    self:ChangeState("Running")
 
-    self.Connections["BasePart_Hitboxing"] = RunService.Heartbeat:Connect(function()
+    self.Connections["Heartbeat1"] = RunService.Heartbeat:Connect(function()
 
-        self:Hitboxing_BasePart()
+        self:FireTouching()
         if self.Visualize then
-            self:Visualize_BasePart()
+            self:VisualizeBasePart()
         end
 
         if self.StartTime + self.Duration < time() then
-            self:Stop_Hitboxing_BasePart()
+            self:Destroy()
         end
 
     end)
 
+end
 
+function HitboxManager:ReturnStoredDate()
+
+    local TouchingPartsTable = table.clone(self.TouchingParts)
+    local PlayerHitListTable = table.clone(self.PlayerHitList)
+
+    local StoredData = {
+        ["TouchingParts"] = TouchingPartsTable,
+        ["PlayerHitList"] =  PlayerHitListTable
+    }
+
+    return StoredData
 end
 
 
-function HitboxManager:Stop_Hitboxing_BasePart()
+function HitboxManager:Destroy()
 
-    print("Stopping")
+    self:ChangeState("Destroying")
 
-    self:Change_State("Stopping")
+    local StoredData = self:ReturnStoredDate()
 
-    --So i have to stop hitboxing here
-    if self.Connections["BasePart_Hitboxing"] then
-
-        local Connection = self.Connections["BasePart_Hitboxing"]
+    for _, Connection in pairs(self.Connections) do
         Connection:Disconnect()
         Connection = nil
-
     end
 
     self.Visualize = false
 
-    if self.Visualizer then
-        self.Visualizer:Destroy()
-        self.Visualizer = nil
-    end
+    self:VisualizeBasePart()
 
-    self.HitList = {}
-    self.TouchingParts = {}
+    self:ChangeState("Destroyed")
 
-    self:Change_State("Stopped")
+    table.clear(self.PlayerHitList)
+    table.clear(self.Connections)
+    table.clear(self.TouchingParts)
+
+    setmetatable(self, nil)
+
+    return StoredData
 
 end
 
