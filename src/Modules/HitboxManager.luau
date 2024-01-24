@@ -4,7 +4,8 @@ local RunService = game:GetService("RunService")
 local PlayerService = game:GetService("Players")
 
 --Modules 
-local GoodSignal = require(ReplicatedStorage.Modules.GoodSignal)
+local GoodSignal = require(ReplicatedStorage:WaitForChild("Modules").GoodSignal)
+local RaycastVisualizer = require(ReplicatedStorage:WaitForChild("Modules").RaycastVisualizer)
 
 local HitboxManager = {}
 HitboxManager.__index = HitboxManager
@@ -14,6 +15,19 @@ HitboxManager.DetectionModes = {
     ["SingleHit"] = "SingleHit", --Detects only one player and hits only one time
     ["Continuous"] = "Continuous", --Can detect multiple players and hit continuous (You can set how fast it hits)
     ["MultiplePlayerButOnlyHitsHead"] = "MultiplePlayerButOnlyHitsHead" --Works like MultiplePlayer(It's the defualt one) but it only hits to head
+}
+
+HitboxManager.HitboxCastingModes = {
+    ["HitEveryPlayerOnRay"] = "HitEveryPlayerOnRay", -- Sends rays and add things that hit to the blacklist, it continuous until raycast doesn't hit anything and if there is a player on blacklist, the player will get damaged
+    ["Continuous"] = "Continuous", -- Sends ray and damages player if hit's a player continuous (with debounce time)
+    ["SingleRay"] = "SingleRay", -- Sends only one ray and hits only one player, only one time
+
+}
+
+HitboxManager.CastModes = {
+    ["Raycast"] = "Raycast",
+    ["Spherecast"] = "Spherecast",
+    ["Shapecast"] = "Shapecast" -- Coming soon
 }
 
 
@@ -29,7 +43,7 @@ end
 function HitboxManager.new()
     local self = setmetatable({}, HitboxManager)
 
-    self.HitboxMode = "BasePart" -- BasePart, Raycast(Could be spherecast, spahecast or blockcast etc.)
+    self.HitboxMode = "Range" -- Range, Raycast(Could be spherecast, spahecast or blockcast etc.)
 
     self.DetectionMode = "MultiplePlayer"
     self.Visualize = true  -- Doesn't suggest in-game, if you want to visualize hitbox set it to true
@@ -60,6 +74,30 @@ function HitboxManager.new()
         ["Destroying"] = false,
         ["Destroyed"] = false,
     }
+
+    self.CastMode = "Raycast"
+    self.HitboxCastingMode = HitboxManager.HitboxCastingModes.HitEveryPlayerOnRay
+
+    self.RaycastInfo = {
+        origin = Vector3.new(0, 0, 0),
+        direction = Vector3.new(0, 10, 0),
+        raycastParams = RaycastParams.new(),
+    }
+
+    self.RaycastInfo.raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    self.RaycastInfo.raycastParams.FilterDescendantsInstances = {}
+
+    self.SpherecastInfo = {
+        position = Vector3.new(0, 0, 0),
+        radius = 1,
+        direction = Vector3.new(0, 10, 0),
+        raycastParams = RaycastParams.new()
+    }
+
+    self.SpherecastInfo.raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    self.SpherecastInfo.raycastParams.FilterDescendantsInstances = {}
+
+    self.CastHitList = {}
 
     return self
 end
@@ -99,6 +137,77 @@ function HitboxManager:ChangeState(NewState)
 
   end
 
+
+  function HitboxManager:SendCast()
+    
+    local CastMode = self.CastMode
+
+    if CastMode == HitboxManager.CastModes.Raycast then
+        
+        local Raycast = workspace:Raycast(unpack(self.RaycastInfo))
+
+        if Raycast then
+            return Raycast
+        else
+            return nil
+        end
+
+    elseif CastMode == HitboxManager.CastModes.Spherecast then
+
+        local Spherecast = workspace:Spherecast(unpack(self.SpherecastInfo))
+
+        if Spherecast then
+            return Spherecast
+        else
+            return nil
+        end
+
+    end
+
+  end
+
+
+  function HitboxManager:GetBoundingPartsForCast()
+
+    local HitboxCastingMode = self.HitboxCastingMode
+
+    if HitboxCastingMode == HitboxManager.HitboxCastingModes.HitEveryPlayerOnRay then
+        
+        if self:SendCast() then -- If it hits something
+
+            local CastHitList = {}
+                
+            repeat
+
+                local Cast = self:SendCast()
+                local CastHitPart = Cast.Instance
+
+                self[self.CastMode.."Info"].raycastParams:AddToFilter(CastHitPart) -- We are excluding parts that we hit and doing it until no hits
+
+                table.insert(CastHitList, CastHitPart)
+                
+            until self:SendCast() == nil
+
+            return CastHitList
+
+        elseif  HitboxCastingMode == HitboxManager.HitboxCastingModes.SingleRay then
+            
+            local CastHitList = {}
+
+            local Cast = self:SendCast()
+            local CastHitPart = Cast.Instance
+
+            table.insert(CastHitList, CastHitPart)
+
+            return CastHitList
+
+        elseif HitboxCastingMode == HitboxManager.HitboxCastingModes.Continuous then
+
+        end
+
+    end
+    
+  end
 
 function HitboxManager:VisualizeBasePart()
 
@@ -283,18 +392,24 @@ function HitboxManager:Start()
     self.StartTime = time()
     self:ChangeState("Running")
 
-    self.Connections["Heartbeat1"] = RunService.Heartbeat:Connect(function()
+    if self.HitboxMode == "Range" then
 
-        self:FireTouching()
-        if self.Visualize then
-            self:VisualizeBasePart()
-        end
+        self.Connections["Heartbeat1"] = RunService.Heartbeat:Connect(function()
 
-        if self.StartTime + self.Duration < time() then
-            self:Destroy()
-        end
+            self:FireTouching()
+            if self.Visualize then
+                self:VisualizeBasePart()
+            end
 
-    end)
+            if self.StartTime + self.Duration < time() then
+                self:Destroy()
+            end
+
+        end)
+
+    elseif self.HitboxMode == "Cast" then
+
+    end
 
 end
 
@@ -343,3 +458,10 @@ end
 
 
 return HitboxManager
+
+
+--[[
+    ---Goal---
+    My goal is getting a ray params and converting it to a raycast
+    it could have same abilities as basepart hitboxs
+]]
