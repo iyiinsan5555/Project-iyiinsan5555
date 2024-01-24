@@ -1,6 +1,7 @@
 --Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 --Modules 
 local GoodSignal = require(ReplicatedStorage.Modules.GoodSignal)
@@ -19,7 +20,7 @@ function HitboxManager.new()
     self.HitList = {}
     self.TouchingParts = {}
     self.Connections = {}
-    
+
     self.Touched = GoodSignal.new()
 
     self.OverlapParams = OverlapParams.new()
@@ -35,8 +36,17 @@ function HitboxManager.new()
 
     self.StartTime = time()
 
+    self.States = {
+        ["Ready"] = true,
+        ["Running"] = false,
+        ["Stopping"] = false,
+        ["Stopped"] = false,
+    }
+
     return self
 end
+
+
 
 local Get_CFrame = {
     ["Instance"] = function(Instance)
@@ -77,6 +87,38 @@ local BasePart_Hitbox = {
 }
 
 
+function HitboxManager:Get_State()
+
+    local States = self.States
+
+    for Key, State in pairs(States) do
+
+        if State == true then
+            print(Key)
+            return Key
+        end
+
+    end
+
+    print("No state found")
+    return false
+
+end
+
+function HitboxManager:Change_State(State :string)
+
+    if self.States[State] ~= nil then
+        for k in pairs(self.States) do
+            self.States[k] = false
+        end
+        self.States[State] = true
+    else
+        error("Invalid state: " .. State)
+    end
+
+end
+
+
 function HitboxManager:Visualize_BasePart()
 
    if not self.Visualizer then
@@ -86,7 +128,7 @@ function HitboxManager:Visualize_BasePart()
         Visualizer.Shape = self.Shape
         Visualizer.Size = self.Size
         Visualizer.CFrame = Get_CFrame[typeof(self.CFrame)](self.CFrame)
-        Visualizer.Parent = workspace.Terrain
+        Visualizer.Parent = workspace   
         Visualizer.CanCollide , Visualizer.CanTouch, Visualizer.CanQuery = false, false, false
         Visualizer.Transparency = 0.5
         Visualizer.Anchored = true
@@ -97,20 +139,30 @@ function HitboxManager:Visualize_BasePart()
         self.Visualizer.CFrame = Get_CFrame[typeof(self.CFrame)](self.CFrame)
    end
 
+    if not self:Get_State() == "Running" then
+        warn("Can't visualize basepart, because hitbox isn't running")
+
+        if self.Visualizer then
+            self.Visualizer:Destroy()
+            self.Visualizer = nil
+        end
+        return
+    end
+
 end
 
 
-function HitboxManager:Add_Touching_Parts(Part)
+function HitboxManager:Add_Touching_Parts(Part) -- Rewrite
 
     if not table.find(self.TouchingParts, Part) then
         table.insert(self.TouchingParts, Part)
     end
-    
+
 end
 
 
 function HitboxManager:Hitboxing_BasePart()
-    
+
     local DetectionMode = self.DetectionMode
     local BoundingParts = BasePart_Hitbox[self.Shape](self)
 
@@ -130,8 +182,8 @@ end
 HitboxManager.DetectionMode_Functions = {
     ["Constant"] = function(self, Humanoid, Part)
         print("Constant")
-        self:Add_Touching_Parts(Part)
-        
+        --self:Add_Touching_Parts(Part)
+
         local Character_Name = Humanoid.Parent.Name
         self.HitList[Character_Name] = Humanoid
 
@@ -141,7 +193,7 @@ HitboxManager.DetectionMode_Functions = {
 
     ["Single"] = function(self, Humanoid, Part)
         print("Single")
-        self:Add_Touching_Parts(Part)
+        --self:Add_Touching_Parts(Part)
 
         local Character_Name = Humanoid.Parent.Name
         self.HitList[Character_Name] = Humanoid
@@ -155,7 +207,7 @@ HitboxManager.DetectionMode_Functions = {
 
     ["Multi"] = function(self, Humanoid, Part)
         print("Multi")
-        self:Add_Touching_Parts(Part)
+        --self:Add_Touching_Parts(Part)
 
         local Character_Name = Humanoid.Parent.Name
         if table.find(self.HitList, Character_Name) then
@@ -174,62 +226,52 @@ HitboxManager.DetectionMode_Functions = {
 function HitboxManager:Start_Hitboxing_BasePart()
 
     self.StartTime = time()
+    self:Change_State("Running")
 
-    task.spawn(function()
-        self.Connections["BasePart_Hitboxing"] = RunService.Heartbeat:Connect(function()
+    self.Connections["BasePart_Hitboxing"] = RunService.Heartbeat:Connect(function()
 
-            print(11)
+        self:Hitboxing_BasePart()
+        if self.Visualize then
+            self:Visualize_BasePart()
+        end
 
-            self:Hitboxing_BasePart()
-            if self.Visualize then
-                self:Visualize_BasePart()
-            end
-
-            if self.StartTime + self.Duration < time() then
-                self:Stop_Hitboxing_BasePart()
-            end
-
-        end)
+        if self.StartTime + self.Duration < time() then
+            self:Stop_Hitboxing_BasePart()
+        end
 
     end)
+
 
 end
 
 
 function HitboxManager:Stop_Hitboxing_BasePart()
 
-    print(self)
-    self.Touched:DisconnectAll()
+    print("Stopping")
 
-    self.Visualizer.Color  = Color3.fromRGB(0, 0, 0)
+    self:Change_State("Stopping")
 
-    self:Clear()
+    --So i have to stop hitboxing here
+    if self.Connections["BasePart_Hitboxing"] then
 
-    print(self)
-
-    --setmetatable(self, nil)
-
-end
-
-
-
-function HitboxManager:Clear()
-
-    self.HitList = {}
-
-    for _, Connection in pairs(self.Connections) do
+        local Connection = self.Connections["BasePart_Hitboxing"]
         Connection:Disconnect()
-        print(tostring(Connection).." disconnected")
+        Connection = nil
+
     end
 
+    self.Visualize = false
+
     if self.Visualizer then
-        print(self.Visualizer.CFrame)
-        print("Self.Visualizer Destroyed")
-        self.Visualizer.Parent = nil
         self.Visualizer:Destroy()
         self.Visualizer = nil
     end
-    print(self.Visualizer)
+
+    self.HitList = {}
+    self.TouchingParts = {}
+
+    self:Change_State("Stopped")
+
 end
 
 
