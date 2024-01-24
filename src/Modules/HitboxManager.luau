@@ -10,9 +10,10 @@ local HitboxManager = {}
 HitboxManager.__index = HitboxManager
 
 HitboxManager.DetectionModes = {
-    ["MultiplePlayer"] = "MultiplePlayer", --Detects multiple players but hits only one time
+    ["MultiplePlayer"] = "MultiplePlayer", --Detects multiple players but hits only one time (Defualt)
     ["SingleHit"] = "SingleHit", --Detects only one player and hits only one time
-    ["Continuous"] = "Continuous" --Can detect multiple players and hit continuous (You can set how fast it hits)
+    ["Continuous"] = "Continuous", --Can detect multiple players and hit continuous (You can set how fast it hits)
+    ["MultiplePlayerButOnlyHitsHead"] = "MultiplePlayerButOnlyHitsHead" --Works like MultiplePlayer(It's the defualt one) but it only hits to head
 }
 
 
@@ -193,6 +194,10 @@ function HitboxManager:FireTouching()
             self:Hitboxing(Part, Humanoid)
         end
 
+        if Part.Name == "Head" then
+            self:HitboxingOnlyHead(Part)
+        end
+
     end
 
 end
@@ -231,6 +236,31 @@ function HitboxManager:Hitboxing(HitPart, Humanoid)
 
     end
 
+end
+
+function HitboxManager:HitboxingOnlyHead(Head)
+
+    local DetectionMode = self.DetectionMode
+    local Character = Head.Parent
+    local Humanoid = Character:FindFirstChild("Humanoid")
+    local Player = PlayerService:GetPlayerFromCharacter(Character)
+    local PlayerName = Player.Name
+
+    if not Humanoid then
+        return
+    end
+
+    if DetectionMode == "MultiplePlayerButOnlyHitsHead" then
+
+        if table.find(self.PlayerHitList, PlayerName) then
+            return
+        else
+            self:AddToPlayerHitList(PlayerName)
+        end
+
+        self.Touched:Fire(Head, Humanoid)
+
+    end
 end
 
 

@@ -15,13 +15,14 @@ local New_Hitbox = HitboxManager.new()
 New_Hitbox.Shape = Enum.PartType.Ball
 New_Hitbox.CFrame = TweenPart
 New_Hitbox.Size = 5
-New_Hitbox.DetectionMode = HitboxManager.DetectionModes.Continuous
+New_Hitbox.DetectionMode = HitboxManager.DetectionModes.MultiplePlayerButOnlyHitsHead
 New_Hitbox.Duration = math.huge
 
 New_Hitbox:Start()
 
-New_Hitbox.Touched:Connect(function(_, Humanoid)
-    Humanoid:TakeDamage(1)
+New_Hitbox.Touched:Connect(function(Head, Humanoid)
+    Humanoid:TakeDamage(100)
+    print(Head, Head.Parent)
 end)
 
 New_Hitbox.StateChanged:Connect(function(NewState, PreviousState)
@@ -30,5 +31,5 @@ end)
 
 task.wait(15)
 
-local StoredData = New_Hitbox:Destroy()
-print(StoredData)
+--local StoredData = New_Hitbox:Destroy()
+--print(StoredData)
