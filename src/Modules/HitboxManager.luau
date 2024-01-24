@@ -36,6 +36,7 @@ function HitboxManager.new()
     self.PlayerHitList = {} -- The Player's names that hit by hitbox shown there
     self.CurrentlyTouchingParts = {} -- Shows the touching parts, it shows all parts that's in hitbox
     self.Connections = {} -- To store connections
+    self.DebounceList = {}
 
     self.Touched = GoodSignal.new() -- Using GoodSignal to make connection with other scripts
     self.StateChanged = GoodSignal.new()
@@ -47,6 +48,7 @@ function HitboxManager.new()
     self.Position = Vector3.new(0, 0, 0)
 
     self.Duration = math.huge
+    self.ContinuousDebounce = 0.5
 
     self.Shape = Enum.PartType.Block --Or you can use Enum.PartType.Ball
 
@@ -232,8 +234,20 @@ function HitboxManager:Hitboxing(HitPart, Humanoid)
 
         self:AddToPlayerHitList(PlayerName)
 
-        self.Touched:Fire(HitPart, Humanoid)
+        if self.DebounceList[PlayerName] then
 
+            if self.DebounceList[PlayerName] + self.ContinuousDebounce < time()then
+                self.DebounceList[PlayerName] = time()
+            else
+                return
+            end
+
+        else
+            self.DebounceList[PlayerName] = time()
+        end
+
+        self.Touched:Fire(HitPart, Humanoid)
+        
     end
 
 end
