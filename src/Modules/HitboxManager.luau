@@ -104,12 +104,17 @@ function HitboxManager:VisualizeBasePart()
          local Visualizer = Instance.new("Part")
          Visualizer.Color = Color3.fromRGB(255, 0, 0)
          Visualizer.Shape = self.Shape
-         Visualizer.Size = self.Size
          Visualizer.CFrame = GetCFrame(self.CFrame)
          Visualizer.Parent = workspace.Terrain
          Visualizer.CanCollide , Visualizer.CanTouch, Visualizer.CanQuery = false, false, false
          Visualizer.Transparency = 0.5
          Visualizer.Anchored = true
+
+         if self.Shape == Enum.PartType.Ball then
+            Visualizer.Size = Vector3.new(self.Size * 2,self.Size * 2,self.Size * 2)
+        else
+            Visualizer.Size = self.Size
+         end
  
          self.Visualizer = Visualizer
  
@@ -165,7 +170,7 @@ function HitboxManager:GetBoundingParts(Shape)
         end
 
         local LastCFrame = GetCFrame(self.CFrame)
-        local BoundingParts = workspace:GetPartBoundsInRadius(LastCFrame, self.Size, self.OverlapParams)
+        local BoundingParts = workspace:GetPartBoundsInRadius(LastCFrame.Position, self.Size, self.OverlapParams)
 
         return BoundingParts
     end
