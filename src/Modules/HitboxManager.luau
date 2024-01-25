@@ -36,6 +36,7 @@ HitboxManager.HitboxModes = {
 }
 
 RaycastVisualizer.Settings.CreateBillboard = false
+RaycastVisualizer.Settings.VisualizationLifeTime = 2
 
 function GetCFrame(self_CFrame)
     if typeof(self_CFrame) == "Instance" then
@@ -263,7 +264,7 @@ function HitboxManager:VisualizeBasePart()
 
  function HitboxManager:AddTouchingParts(BoundingParts :table)
 
-    self.TouchingParts = BoundingParts
+    self.CurrentlyTouchingParts = BoundingParts
 
 end
 
@@ -521,7 +522,7 @@ end
 
 function HitboxManager:ReturnStoredDate()
 
-    local TouchingPartsTable = table.clone(self.TouchingParts)
+    local TouchingPartsTable = table.clone(self.CurrentlyTouchingParts)
     local PlayerHitListTable = table.clone(self.PlayerHitList)
 
     local StoredData = {
@@ -552,7 +553,7 @@ function HitboxManager:Destroy()
 
     table.clear(self.PlayerHitList)
     table.clear(self.Connections)
-    table.clear(self.TouchingParts)
+    table.clear(self.CurrentlyTouchingParts )
 
     setmetatable(self, nil)
 
