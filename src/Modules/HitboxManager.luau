@@ -205,10 +205,12 @@ function HitboxManager:ChangeState(NewState)
                 local Cast = self:SendCast()
                 local CastHitPart = Cast and Cast.Instance
 
-                self[self.CastMode.."Info"].raycastParams:AddToFilter(CastHitPart) -- We are excluding parts that we hit and doing it until no hits
+                if CastHitPart then
+                    self[self.CastMode.."Info"].raycastParams:AddToFilter(CastHitPart)  
+                end -- We are excluding parts that we hit and doing it until no hits
 
                 table.insert(CastHitList, CastHitPart)
-                
+                task.wait()
             until self:SendCast() == nil
 
             return CastHitList
@@ -446,6 +448,7 @@ function HitboxManager:HitboxingForCast()
                     self:AddToPlayerHitList(PlayerName)
 
                     self.Hit:Fire(Part, Humanoid)
+
                 end
             end
 

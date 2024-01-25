@@ -157,7 +157,6 @@ function RaycastVisualizer:VisualizeRaycast(Origin :Vector3, Direction :Vector3)
 
 		end
 
-		task.wait()
 
 	until DidntHitAnything == true
 
@@ -199,7 +198,7 @@ function RaycastVisualizer:VisualizeSpherecast(Origin :Vector3, Radius :number, 
 		SphereEffectPart.Name = "SpherePart"
 		SphereEffectPart.Anchored = true
 		SphereEffectPart.Shape = Enum.PartType.Ball
-		SphereEffectPart.Size = Vector3.new(Radius, Radius, Radius)
+		SphereEffectPart.Size = Vector3.new(Radius * 2, Radius * 2, Radius * 2)
 		SphereEffectPart.CanCollide = false
 		SphereEffectPart.CanTouch = false
 		SphereEffectPart.CanQuery = false
@@ -301,7 +300,6 @@ function RaycastVisualizer:VisualizeSpherecast(Origin :Vector3, Radius :number, 
 
 		end
 
-		task.wait()
 
 	until DidntHitAnything == true
 
