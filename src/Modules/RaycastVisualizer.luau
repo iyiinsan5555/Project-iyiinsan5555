@@ -26,7 +26,6 @@ RaycastVisualizer.Settings = {
 
 
 function RaycastVisualizer:VisualizeRaycast(Origin :Vector3, Direction :Vector3)
-	print("Visualization has started!")
 	--Visualizing Raycast
 
 	local InstancesFolder = Instance.new("Folder")
@@ -94,11 +93,14 @@ function RaycastVisualizer:VisualizeRaycast(Origin :Vector3, Direction :Vector3)
       		RaycastHitPartEffect.Material = Enum.Material.SmoothPlastic
 			RaycastHitPartEffect.Transparency = RaycastVisualizer.Settings.HitPartEffectTransparency
             RaycastHitPartEffect.Parent = InstancesFolder
+			RaycastHitPartEffect.Massless = true
 
-			if RaycastHitPartEffect:FindFirstChildOfClass("Decal") or RaycastHitPartEffect:FindFirstChildOfClass("Texture") then
-				for _, TextureOrDecal in pairs(RaycastHitPartEffect:GetChildren()) do
-					TextureOrDecal:Destroy()
-				end
+			for _, Thing in pairs(RaycastHitPartEffect:GetChildren()) do
+				Thing:Destroy()
+			end
+
+			if RaycastHitPartEffect:IsA("MeshPart") then
+				RaycastHitPartEffect.TextureID = ""
 			end
 
             if not AlreadyHit then
@@ -138,7 +140,7 @@ function RaycastVisualizer:VisualizeRaycast(Origin :Vector3, Direction :Vector3)
 
 				local InfoBillboard = RaycastInfoBillboardGui:Clone()
 				InfoBillboard.Parent = RaycastHitPartEffect
-				InfoBillboard.StudsOffset = Vector3.new(0, RaycastHitPartEffect.Size.Y * 3, 0)
+				InfoBillboard.StudsOffset = Vector3.new(0, RaycastHitPartEffect.Size.Y + 5, 0)
 				InfoBillboard.MaxDistance = RaycastVisualizer.Settings.BillboardMaxDistance
 				local HolderFrame = InfoBillboard.HolderFrame
 				HolderFrame.BasePartNameTextLabel.Text = HitRaycast.Instance.Name
@@ -179,7 +181,7 @@ function RaycastVisualizer:VisualizeRaycast(Origin :Vector3, Direction :Vector3)
 end
 
 
-function RaycastVisualizer:VisualizeSpherecast(Origin :Vector3, Direction :Vector3, Radius :number)
+function RaycastVisualizer:VisualizeSpherecast(Origin :Vector3, Radius :number, Direction :Vector3)
 
 	local CurrentDistance = 0
 
@@ -235,11 +237,14 @@ function RaycastVisualizer:VisualizeSpherecast(Origin :Vector3, Direction :Vecto
       		SpherecastHitPartEffect.Material = Enum.Material.SmoothPlastic
 			SpherecastHitPartEffect.Transparency = RaycastVisualizer.Settings.HitPartEffectTransparency
             SpherecastHitPartEffect.Parent = InstancesFolder
+			SpherecastHitPartEffect.Massless = true
 
-			if SpherecastHitPartEffect:FindFirstChildOfClass("Decal") or SpherecastHitPartEffect:FindFirstChildOfClass("Texture") then
-				for _, TextureOrDecal in pairs(SpherecastHitPartEffect:GetChildren()) do
-					TextureOrDecal:Destroy()
-				end
+			for _, Thing in pairs(SpherecastHitPartEffect:GetChildren()) do
+				Thing:Destroy()
+			end
+
+			if SpherecastHitPartEffect:IsA("MeshPart") then
+				SpherecastHitPartEffect.TextureID = ""
 			end
 
             if not AlreadyHit then
@@ -279,7 +284,7 @@ function RaycastVisualizer:VisualizeSpherecast(Origin :Vector3, Direction :Vecto
 
 				local InfoBillboard = RaycastInfoBillboardGui:Clone()
 				InfoBillboard.Parent = SpherecastHitPartEffect
-				InfoBillboard.StudsOffset = Vector3.new(0, SpherecastHitPartEffect.Size.Y * 3, 0)
+				InfoBillboard.StudsOffset = Vector3.new(0, SpherecastHitPartEffect.Size.Y + 5, 0)
 				InfoBillboard.MaxDistance = RaycastVisualizer.Settings.BillboardMaxDistance
 				local HolderFrame = InfoBillboard.HolderFrame
 				HolderFrame.BasePartNameTextLabel.Text = HitSpherecast.Instance.Name

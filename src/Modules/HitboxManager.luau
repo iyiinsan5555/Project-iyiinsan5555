@@ -30,6 +30,12 @@ HitboxManager.CastModes = {
     ["Shapecast"] = "Shapecast" -- Coming soon
 }
 
+HitboxManager.HitboxModes = {
+    ["Range"] = "Range",
+    ["Cast"] = "Cast"
+}
+
+RaycastVisualizer.Settings.CreateBillboard = false
 
 function GetCFrame(self_CFrame)
     if typeof(self_CFrame) == "Instance" then
@@ -46,7 +52,7 @@ function HitboxManager.new()
     self.HitboxMode = "Range" -- Range, Raycast(Could be spherecast, spahecast or blockcast etc.)
 
     self.DetectionMode = "MultiplePlayer"
-    self.Visualize = true  -- Doesn't suggest in-game, if you want to visualize hitbox set it to true
+    self.Visualize = false  -- Doesn't suggest in-game, if you want to visualize hitbox set it to true
     self.PlayerHitList = {} -- The Player's names that hit by hitbox shown there
     self.CurrentlyTouchingParts = {} -- Shows the touching parts, it shows all parts that's in hitbox
     self.Connections = {} -- To store connections
@@ -54,6 +60,7 @@ function HitboxManager.new()
 
     self.Touched = GoodSignal.new() -- Using GoodSignal to make connection with other scripts
     self.StateChanged = GoodSignal.new()
+    self.Hit = GoodSignal.new()
 
     self.OverlapParams = OverlapParams.new() -- OverlapParams for Hitbox
 
@@ -139,12 +146,21 @@ function HitboxManager:ChangeState(NewState)
 
 
   function HitboxManager:SendCast()
-    
+
     local CastMode = self.CastMode
 
     if CastMode == HitboxManager.CastModes.Raycast then
-        
-        local Raycast = workspace:Raycast(unpack(self.RaycastInfo))
+
+        local origin = self.RaycastInfo.origin
+        local direction = self.RaycastInfo.direction
+        local raycastParams = self.RaycastInfo.raycastParams
+
+        local Raycast = workspace:Raycast(origin, direction, raycastParams)
+
+        --Visualizing cast
+        if self.Visualize then
+            RaycastVisualizer:VisualizeRaycast(origin, direction)
+        end
 
         if Raycast then
             return Raycast
@@ -154,7 +170,17 @@ function HitboxManager:ChangeState(NewState)
 
     elseif CastMode == HitboxManager.CastModes.Spherecast then
 
-        local Spherecast = workspace:Spherecast(unpack(self.SpherecastInfo))
+        local position = self.SpherecastInfo.position
+        local radius = self.SpherecastInfo.radius
+        local direction = self.SpherecastInfo.direction
+        local raycastParams = self.SpherecastInfo.raycastParams
+
+        local Spherecast = workspace:Spherecast(position, radius, direction, raycastParams)
+
+        --Visualizing cast
+        if self.Visualize then
+            RaycastVisualizer:VisualizeSpherecast(position, radius, direction)
+        end
 
         if Spherecast then
             return Spherecast
@@ -167,20 +193,16 @@ function HitboxManager:ChangeState(NewState)
   end
 
 
-  function HitboxManager:GetBoundingPartsForCast()
-
-    local HitboxCastingMode = self.HitboxCastingMode
+  function HitboxManager:GetBoundingPartsForCast(HitboxCastingMode :string)
 
     if HitboxCastingMode == HitboxManager.HitboxCastingModes.HitEveryPlayerOnRay then
-        
-        if self:SendCast() then -- If it hits something
 
             local CastHitList = {}
                 
             repeat
 
                 local Cast = self:SendCast()
-                local CastHitPart = Cast.Instance
+                local CastHitPart = Cast and Cast.Instance
 
                 self[self.CastMode.."Info"].raycastParams:AddToFilter(CastHitPart) -- We are excluding parts that we hit and doing it until no hits
 
@@ -190,24 +212,16 @@ function HitboxManager:ChangeState(NewState)
 
             return CastHitList
 
-        elseif  HitboxCastingMode == HitboxManager.HitboxCastingModes.SingleRay then
-            
-            local CastHitList = {}
+    elseif  HitboxCastingMode == HitboxManager.HitboxCastingModes.SingleRay then
 
             local Cast = self:SendCast()
-            local CastHitPart = Cast.Instance
+            local CastHitPart = Cast and Cast.Instance
 
-            table.insert(CastHitList, CastHitPart)
-
-            return CastHitList
-
-        elseif HitboxCastingMode == HitboxManager.HitboxCastingModes.Continuous then
-
-        end
-
+            return CastHitPart
+            -- No need to make function for Continuous, I will make the different on other function
     end
-    
-  end
+end
+
 
 function HitboxManager:VisualizeBasePart()
 
@@ -387,6 +401,91 @@ function HitboxManager:HitboxingOnlyHead(Head)
 end
 
 
+function HitboxManager:HitboxingForCast()
+    
+    local HitboxCastingMode = self.HitboxCastingMode
+
+    if HitboxCastingMode == HitboxManager.HitboxCastingModes.SingleRay then
+        
+        local CastHitPart = self:GetBoundingPartsForCast(HitboxManager.HitboxCastingModes.SingleRay)
+        if not CastHitPart then return end
+        local Character = CastHitPart and CastHitPart:FindFirstAncestorOfClass("Model") or CastHitPart.Parent
+        local Humanoid = Character and Character:FindFirstChild("Humanoid")
+
+        if Humanoid then
+            local Player = PlayerService:GetPlayerFromCharacter(Character)
+            local PlayerName = Player.Name
+
+            self:AddToPlayerHitList(PlayerName)
+
+            self.Hit:Fire(CastHitPart, Humanoid)
+        end
+
+        self:Destroy()
+
+    elseif HitboxCastingMode == HitboxManager.HitboxCastingModes.HitEveryPlayerOnRay then
+
+        local CastHitList = self:GetBoundingPartsForCast(HitboxManager.HitboxCastingModes.HitEveryPlayerOnRay)
+        local HumanoidList = {}
+
+        for _, Part in pairs(CastHitList)  do
+
+            local Character = Part:FindFirstAncestorOfClass("Model") or Part.Parent
+            local Humanoid = Character and Character:FindFirstChild("Humanoid")
+
+            if Humanoid then
+
+                local Player = PlayerService:GetPlayerFromCharacter(Character)
+                local PlayerName = Player.Name
+
+                if not HumanoidList[PlayerName] then
+
+                    HumanoidList[PlayerName] = Humanoid
+
+                    self:AddToPlayerHitList(PlayerName)
+
+                    self.Hit:Fire(Part, Humanoid)
+                end
+            end
+
+        end
+
+        self:Destroy()
+
+    elseif HitboxCastingMode == HitboxManager.HitboxCastingModes.Continuous then
+
+        local Debounce = self.ContinuousDebounce
+        local LastCastTime = 0
+
+        self.Connections["Heartbeat2"] = RunService.Heartbeat:Connect(function()
+
+            if LastCastTime + Debounce < time() then
+
+                LastCastTime = time()
+
+                local CastHitPart = self:GetBoundingPartsForCast(HitboxManager.HitboxCastingModes.SingleRay) -- Using single ray to get cast hit part
+                if not CastHitPart then return end
+                local Character = CastHitPart and CastHitPart:FindFirstAncestorOfClass("Model") or CastHitPart.Parent
+                local Humanoid = Character and Character:FindFirstChild("Humanoid")
+
+                if Humanoid then
+                    local Player = PlayerService:GetPlayerFromCharacter(Character)
+                    local PlayerName = Player.Name
+        
+                    self:AddToPlayerHitList(PlayerName)
+
+                    self.Hit:Fire(CastHitPart, Humanoid)
+                end
+
+            end
+
+        end)
+
+    end
+
+
+end
+
 function HitboxManager:Start()
 
     self.StartTime = time()
@@ -408,6 +507,12 @@ function HitboxManager:Start()
         end)
 
     elseif self.HitboxMode == "Cast" then
+
+        self:HitboxingForCast()
+
+        if self.StartTime + self.Duration < time() then  -- For "continuous" hitbox casting mode
+            self:Destroy()
+        end
 
     end
 

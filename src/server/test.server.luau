@@ -4,7 +4,25 @@ local TweenService = game:GetService("TweenService")
 
 local HitboxManager = require(ReplicatedStorage:WaitForChild("Modules").HitboxManager)
 
-local TweenPart = Instance.new("Part")
+
+local RaycastHitbox = HitboxManager.new()
+RaycastHitbox.CastMode = HitboxManager.CastModes.Raycast
+RaycastHitbox.HitboxCastingMode = HitboxManager.HitboxCastingModes.Continuous
+RaycastHitbox.HitboxMode = HitboxManager.HitboxModes.Cast
+RaycastHitbox.RaycastInfo.origin = Vector3.new(0, 3, 0)
+RaycastHitbox.RaycastInfo.direction = Vector3.new(0,0,20)
+RaycastHitbox.Visualize = true
+
+RaycastHitbox:Start()
+
+RaycastHitbox.Hit:Connect(function(HitPart, Humanoid)
+    print(HitPart)
+    Humanoid:TakeDamage(5)
+
+end)
+
+
+--[[local TweenPart = Instance.new("Part")
 TweenPart.Parent = workspace
 TweenPart.Anchored = true
 
@@ -33,4 +51,4 @@ end)
 task.wait(10)
 
 --local StoredData = New_Hitbox:Destroy()
---print(StoredData)
+--print(StoredData)]]
