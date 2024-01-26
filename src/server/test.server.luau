@@ -1,5 +1,5 @@
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+--[[local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
@@ -30,3 +30,4 @@ end)
 
 Hitbox:Start()
 
+]]
