@@ -1,28 +1,15 @@
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PlayerService = game:GetService("Players")
 
-local Player = Players.LocalPlayer
-local Character = Player.Character or Player.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
+local Modules = ReplicatedStorage:WaitForChild("Modules")
 
-Player.CharacterAdded:Connect(function(character)
-    Character = character
-    Humanoid = Character:WaitForChild("Humanoid")
-end)
+local CameraMovementModule = require(Modules:WaitForChild("CameraMovementModule"))
 
-local LerpAmount = 0.25
+local Player = PlayerService.LocalPlayer
 
+local CameraMovement = CameraMovementModule.new(Player)
 
+CameraMovement:Start()
 
-RunService:BindToRenderStep("CameraMovement", Enum.RenderPriority.Camera.Value + 1, function()
-
-    local t = tick()
-    local sinOffset = Vector3.new(math.sin(t * 2) * 0.1, math.sin(t * 2.5) * 0.1, math.sin(t * 3) * 0.1)
-
-    if Humanoid.MoveDirection.Magnitude > 0 then
-        sinOffset = Vector3.new(math.sin(t * 2.5) * 0.25, math.sin(t * 2.5) * 0.2, math.sin(t * 2) * 0.25)
-    end
-
-    Humanoid.CameraOffset = Humanoid.CameraOffset:Lerp((Humanoid.MoveDirection * 0.5 ) + sinOffset, LerpAmount)
-
-end)
+CameraMovement.LerpAmount = 0.25
+CameraMovement.MovingMultiplier = 1
