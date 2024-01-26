@@ -79,6 +79,15 @@ local CameraShakePresets = {
 		c.RotationInfluence = Vector3.new(1.25, 0, 4)
 		return c
 	end;
+
+	-- A very rough, yet low magnitude shake.
+	-- Sustained.
+	Running = function()
+		local c = CameraShakeInstance.new(0.5, 1, 0.25, 0.25)
+		c.PositionInfluence = Vector3.new(0, 0, 0)
+		c.RotationInfluence = Vector3.new(1.25, 0, 4)
+		return c
+	end;
 	
 	
 	-- A slightly rough, medium magnitude shake.

@@ -1,10 +1,18 @@
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Modules = ReplicatedStorage:WaitForChild("Modules")
+
+local CameraShakerModule = require(Modules:WaitForChild("CameraShaker"):WaitForChild("CameraShaker"))
+local CameraShakePresets = require(Modules:WaitForChild("CameraShaker"):WaitForChild("CameraShakePresets"))
+
+local LastShakeTime = 0
 
 local CameraMovement = {}
 CameraMovement.__index = CameraMovement
 
 
-function CameraMovement.new(Player)
+function CameraMovement.new(Player :Player, Camera :Camera)
     local self = setmetatable({}, CameraMovement)
 
     self.MovingMultiplier = 1.5
@@ -15,15 +23,26 @@ function CameraMovement.new(Player)
     self.Player = Player
     self.Character = Player.Character or Player.CharacterAdded:Wait()
 
+    self.CameraShaker = CameraShakerModule.new(Enum.RenderPriority.Camera.Value + 1, function(ShakeCFrame)
+        Camera.CFrame = Camera.CFrame * ShakeCFrame
+    end)
+
     return self
 end
 
 
 function CameraMovement:Start()
+    self.CameraShaker:Start()
+
     self.Connections["BindToRenderStep"] = RunService:BindToRenderStep("CameraMovement", Enum.RenderPriority.Camera.Value + 1, function()
 
         if not self.Player.Character then
             return
+        end
+
+        if LastShakeTime + 0.5 < tick() then
+            LastShakeTime = tick()
+            self.CameraShaker:Shake(CameraShakePresets.Running)
         end
 
         local Player = self.Player
@@ -44,7 +63,7 @@ function CameraMovement:Start()
             sinOffset = Vector3.new(math.sin(t * 2.5) * 0.25 * Multiplier, math.sin(t * 2.5) * 0.2 * Multiplier, math.sin(t * 2) * 0.25 * Multiplier)
         end
 
-        Humanoid.CameraOffset = Humanoid.CameraOffset:Lerp((Humanoid.MoveDirection * 0.5 * Multiplier ) + sinOffset, self.LerpAmount)
+        Humanoid.CameraOffset = Humanoid.CameraOffset:Lerp((Humanoid.MoveDirection * 0.3 * Multiplier ) + sinOffset, self.LerpAmount)
 
     end)
 end

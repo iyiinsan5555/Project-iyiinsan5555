@@ -10,23 +10,20 @@ local CameraShakerModule = require(Modules:WaitForChild("CameraShaker"):WaitForC
 local Player = PlayerService.LocalPlayer
 local Camera = workspace:WaitForChild("Camera")
 
-local CameraMovement = CameraMovementModule.new(Player)
+local CameraMovement = CameraMovementModule.new(Player, Camera)
 
 CameraMovement:Start()
 
 CameraMovement.LerpAmount = 0.25
 CameraMovement.MovingMultiplier = 1
 
+--[[task.wait(5)
 
 local CameraShaker = CameraShakerModule.new(Enum.RenderPriority.Camera.Value + 1, function(ShakeCFrame)
     Camera.CFrame = Camera.CFrame * ShakeCFrame
 end)
 
 CameraShaker:Start()
-
---[[task.wait(5)
-
-
 
 task.spawn(function()
     while task.wait(3) do
