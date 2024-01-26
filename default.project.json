@@ -6,6 +6,9 @@
     "ReplicatedStorage": {
       "Modules": {
         "$path": "src/Modules"
+      },
+      "CameraShaker" : {
+        "$path": "src/Modules/CameraShaker"
       }
     },
 

@@ -6,11 +6,11 @@ local Workspace = game:GetService("Workspace")
 
 local CustomInstanceCreator = require(ReplicatedStorage:WaitForChild("Modules").CustomInstanceCreatorModule)
 
-local JumpDebounce = false
+local IsFalling = false
 local Flying = false
 local DoubleJumpTime = 0.5 -- Time in seconds within which the second jump must occur
 local FlyConnection = nil
-local LastTimeJumpRequest = 0
+local LastTimeFlyRequest = 0
 
 local Player = PlayerService.LocalPlayer
 local Character = script.Parent.Parent --Just get the character, could change later
@@ -23,7 +23,21 @@ local ControlModule = require(Player:WaitForChild("PlayerScripts"):WaitForChild(
 local VelocityCalculator = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("VelocityCalculator"))
 
 
+Humanoid.StateChanged:Connect(function()
+    if Enum.HumanoidStateType.FallingDown or Enum.HumanoidStateType.Freefall then
+        IsFalling = true
+    else
+        IsFalling = false
+    end
+end)
+
+
 local function StartFly()
+
+    if LastTimeFlyRequest + DoubleJumpTime > tick() then
+        return
+    end
+
     print("StartFly")
 
     Flying = true
@@ -100,28 +114,18 @@ end
 
 local function OnJumpRequest()
 
-    local currentTime = time()
-    if currentTime - LastTimeJumpRequest < 0.175 then
-        -- If the last jump request was less than 0.175 seconds ago, ignore this request
+    if LastTimeFlyRequest + 0.15 > time() then
         return
     end
 
-    LastTimeJumpRequest = currentTime
+    LastTimeFlyRequest = time()
 
-    print("OnJumpRequest", LastTimeJumpRequest)
+    local HumanoidState = Humanoid:GetState()
 
-
-    if Flying == true then
-        EndFly()
-    end
-
-
-    if JumpDebounce then
+    if not Flying and IsFalling and not (HumanoidState == Enum.HumanoidStateType.Running or HumanoidState == Enum.HumanoidStateType.Jumping) then
         StartFly()
-    else
-        JumpDebounce = true
-        task.wait(DoubleJumpTime)
-        JumpDebounce = false
+    elseif Flying and HumanoidState == Enum.HumanoidStateType.Physics then
+        EndFly()
     end
 
 end
