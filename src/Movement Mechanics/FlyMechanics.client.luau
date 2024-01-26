@@ -58,7 +58,7 @@ local function StartFly()
     CustomVelocity.TweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 0, false, 0)
 
     CustomVelocity.Changed:Connect(function(NewVelocity, PreviousVelocity)
-        print("New velocity: "..tostring(NewVelocity), " Old velocity: "..tostring(PreviousVelocity))
+        --print("New velocity: "..tostring(NewVelocity), " Old velocity: "..tostring(PreviousVelocity))
     end)
 
     FlyConnection = RunService.Heartbeat:Connect(function()
