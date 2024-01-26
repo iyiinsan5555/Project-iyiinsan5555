@@ -93,6 +93,8 @@ local function StartFly()
         LinearVelocity.VectorVelocity = CustomVelocity.Velocity
 
         AlignOrientation.CFrame = Camera.CFrame
+        
+        -- Use MoveVector to play animations
 
     end)
 
