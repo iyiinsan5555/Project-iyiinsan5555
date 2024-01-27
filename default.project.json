@@ -25,9 +25,7 @@
         }
       },
       "StarterPlayerScripts": {
-        "Movement Mechanics": {
-          "$path": "src/StarterPlayerScripts"
-        }
+        
       }
     },
 
