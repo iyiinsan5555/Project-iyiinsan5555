@@ -55,7 +55,6 @@ end)
 local LockSystem = LockSystemModule.new(Player, Camera)
 
 LockSystem.Range = 300
-LockSystem.CameraOffset = Vector3.zero
 
 LockSystem.TargetChanged:Connect(function(NewTarget, OldTarget)
     print("Target Changed", NewTarget, OldTarget)
