@@ -36,7 +36,7 @@ function LockSystem.new(Player :Player, Camera :Camera)
 
     self.Targets = {} --Table of target's in range
     self.TargetsInViewOfCamera = {} --Table of target's in view of camera and in range
-    self.PotantialTargets = {} --Table of switchable targets
+    self.PotentialTargets = {} --Table of switchable targets
     self.Connections = {} --Table of connections, used to stop connections
 
     self.Character = Player.Character or Player.CharacterAdded:Wait() --Getting character to use it
@@ -127,7 +127,7 @@ function LockSystem:GetTargetInViewOfCamera()
 end
 
 
-function LockSystem:GetPotantialTargets() --Using it to get left and right characters
+function LockSystem:GetPotentialTargets() --Using it to get left and right characters
 
     local PlayerCharacter = self.Character --Getting character to define HumanoidRootPart
     local HumanoidRootPart = PlayerCharacter:FindFirstChild("HumanoidRootPart")
@@ -156,28 +156,28 @@ function LockSystem:GetPotantialTargets() --Using it to get left and right chara
                 if NearestRight then
                     if Distance.X < NearestRight then --If distance is smaller then nearest then we change NearestRight to Distance.X to find the nearest target
                         NearestRight = Distance.X
-                        self.PotantialTargets["RightTarget"] = TargetCharacter --Adding to to our PotentialTargets table
+                        self.PotentialTargets["RightTarget"] = TargetCharacter --Adding to to our PotentialTargets table
                     end
                 else --If there is no defined nearest then we define it
                     NearestRight = Distance.X
-                    self.PotantialTargets["RightTarget"] = TargetCharacter
+                    self.PotentialTargets["RightTarget"] = TargetCharacter
                 end
             elseif Distance.X < 0 then --If the Distance.X is smaller than 0 it's on left
                 if NearestLeft then
                     if Distance.X > NearestLeft then --Doing similar thing as above
                         NearestLeft = Distance.X
-                        self.PotantialTargets["LeftTarget"] = TargetCharacter
+                        self.PotentialTargets["LeftTarget"] = TargetCharacter
                     end
                 else
                     NearestLeft = Distance.X
-                    self.PotantialTargets["LeftTarget"] = TargetCharacter
+                    self.PotentialTargets["LeftTarget"] = TargetCharacter
                 end
             end
 
         end
     end
 
-    return self.PotantialTargets --Returning to PotentialTargets table
+    return self.PotentialTargets --Returning to PotentialTargets table
 end
 
 
@@ -292,147 +292,115 @@ function LockSystem:Start() --The main function for LockSystem
         return
     end
 
-    local LastSwitchTime = 0
-    local LastDeltaTime = 0
+    local LastSwitchTime = 0 --Setting LastSwitchTime to use in Switch debounce
+    local LastDeltaTime = 0 --Setting LastDeltaTime to make smooth the delta to prevent fps drops
 
     RunService:BindToRenderStep("LockSystem", Enum.RenderPriority.Camera.Value + 1, function(DeltaTime)
-        DeltaTime = (LastDeltaTime + DeltaTime) / 2
+        DeltaTime = (LastDeltaTime + DeltaTime) / 2 --This is to make smooth the delta to prevent fps drops
         LastDeltaTime = DeltaTime
 
-        if not self.Target and not self.Target:FindFirstChild("Humanoid") and not self.Target:FindFirstChild("HumanoidRootPart") and not HumanoidRootPart then
-            self:GetTargetInViewOfCamera()
-            print("Returned 320")
-            return
-        end
+        Target = self.Target --Getting our target
 
-        Target = self.Target
-
-        local Distance = (Target.HumanoidRootPart.Position - PlayerCharacter.HumanoidRootPart.Position).Magnitude
+        local Distance = (Target.HumanoidRootPart.Position - PlayerCharacter.HumanoidRootPart.Position).Magnitude --Calculating distance between target and player
         local RequiresLineOfSight = self.RequiresLineOfSight
         local HastLineOfSight = self:IsTargetInView()
-        local LineOfSight = (HastLineOfSight and RequiresLineOfSight) or not RequiresLineOfSight
+        local LineOfSight = (HastLineOfSight and RequiresLineOfSight) or not RequiresLineOfSight --Making the LineOfSight boolean
 
-        if not LineOfSight then
-            --Find another target that's in the view
+        if not LineOfSight then --Returning if LineOfSight is false
             print("Returned 334")
             self:Stop()
             return
         end
 
-        if not (Distance < self.Range) and
+        if not (Distance < self.Range) and --Checking something and stopping locking if it's false
+        not Target and
         not Target:FindFirstChild("Humanoid") and
         not (Target:FindFirstChild("Humanoid").Health > 0)
         then
             self:Stop()
-            print(Target:FindFirstChild("Humanoid"), Target:FindFirstChild("Humanoid").Health)
             print("Returned 343")
             return
         end
 
-        PlayerCharacter = self.Character
-        Target = self.Target
+        PlayerCharacter = self.Character --Getting character
+        Target = self.Target --Getting target
 
-        local TargetPosition :Vector3 = Target.HumanoidRootPart.Position
-        local CharacterPosition :Vector3 = PlayerCharacter.HumanoidRootPart.Position
+        local TargetPosition :Vector3 = Target.HumanoidRootPart.Position --Getting target's position
+        local CharacterPosition :Vector3 = PlayerCharacter.HumanoidRootPart.Position --Getting character's position
 
-        local LookTargetPosition = Vector3.new(TargetPosition.X, CharacterPosition.Y, TargetPosition.Z)
+        local LookTargetPosition = Vector3.new(TargetPosition.X, CharacterPosition.Y, TargetPosition.Z) --To calculate PlayerCharacter's CFrame
         local CalculatedCharacterCFrame :CFrame = CFrame.lookAt(CharacterPosition,
         LookTargetPosition,
         PlayerCharacter.HumanoidRootPart.CFrame.UpVector)
 
-        PlayerCharacter:PivotTo(CalculatedCharacterCFrame)
+        PlayerCharacter:PivotTo(CalculatedCharacterCFrame) --Pivotting to make character look at target
 
-        local HumanoidRootPartCFrame :CFrame = PlayerCharacter.HumanoidRootPart.CFrame
+        local HumanoidRootPartCFrame :CFrame = PlayerCharacter.HumanoidRootPart.CFrame --Getting HumanoidRootPart's CFrame
 
-        local OffsetX = HumanoidRootPartCFrame.RightVector * self.CameraOffset.X
+        local OffsetX = HumanoidRootPartCFrame.RightVector * self.CameraOffset.X --Calculating camera offset
         local OffsetY = HumanoidRootPartCFrame.UpVector * self.CameraOffset.Y
         local OffsetZ = HumanoidRootPartCFrame.LookVector * self.CameraOffset.Z
 
-        local Offset :Vector3 = OffsetX + OffsetY + OffsetZ
-        local CameraPosition :Vector3  = HumanoidRootPart.Position + Offset
+        local Offset :Vector3 = OffsetX + OffsetY + OffsetZ --Note here: If flying set self.CameraOffset to Vector3.new(0, 0, 0)
+        local CameraPosition :Vector3  = HumanoidRootPart.Position + Offset --Calculating camera position
 
-        local CalculatedCameraCFrame :CFrameValue = CFrame.lookAt(CameraPosition,
+        local CalculatedCameraCFrame :CFrameValue = CFrame.lookAt(CameraPosition, --Calculating CFrame
         TargetPosition,
         HumanoidRootPartCFrame.UpVector)
 
-        Camera.CFrame = Camera.CFrame:Lerp(CalculatedCameraCFrame, DeltaTime * self.CameraSpeed)
+        Camera.CFrame = Camera.CFrame:Lerp(CalculatedCameraCFrame, DeltaTime * self.CameraSpeed) --Lerping it for smooth transition
 
 
-        if LastSwitchTime + self.SwitchDebounce < time() then
+        if LastSwitchTime + self.SwitchDebounce < time() then --Debounce for switching targets
             --print("Passed 377")
-            local MouseDeltaX = UserInputService:GetMouseDelta().X
+            local MouseDeltaX = UserInputService:GetMouseDelta().X --Getting mouse deltas
             local MouseDeltaY = UserInputService:GetMouseDelta().Y
-            if MouseDeltaX > self.SwitchSens or MouseDeltaX < -self.SwitchSens or MouseDeltaY < -self.SwitchSens or MouseDeltaY > self.SwitchSens then
+            if MouseDeltaX > self.SwitchSens or MouseDeltaX < -self.SwitchSens or MouseDeltaY < -self.SwitchSens or MouseDeltaY > self.SwitchSens then --Checking if mouse delta is bigger than self.SwitchSens
                 --print("Passed 382")
 
-                self:GetTargetInViewOfCamera()
-                local PotantialTargets :table = self:GetPotantialTargets()
-                local RightTarget = PotantialTargets["RightTarget"]
-                local LeftTarget = PotantialTargets["LeftTarget"]
-                local UpTarget = PotantialTargets["UpTarget"]
-                local DownTarget = PotantialTargets["DownTarget"]
+                self:GetTargetInViewOfCamera() --Getting target's in view of camera table again to prevent bugs
+                local PotentialTargets :table = self:GetPotentialTargets() --Getting PotentialTargets
+                local RightTarget = PotentialTargets["RightTarget"]
+                local LeftTarget = PotentialTargets["LeftTarget"]
 
-
-                if math.abs(MouseDeltaX) > math.abs(MouseDeltaY) then
-                    --print(PotantialTargets)
-                    if MouseDeltaX > self.SwitchSens and RightTarget and self:IsTargetInView(RightTarget) then
-                        self:SelectTarget(Target, RightTarget)
-                        self.Target = RightTarget
-                    elseif MouseDeltaX < -self.SwitchSens and LeftTarget and self:IsTargetInView(LeftTarget) then
-                        self:SelectTarget(Target, LeftTarget)
-                        self.Target = LeftTarget
-                    end
-                else
-                    if MouseDeltaY < -self.SwitchSens and UpTarget and self:IsTargetInView(UpTarget) then
-                        self:SelectTarget(Target, UpTarget)
-                        self.Target = UpTarget
-                    elseif MouseDeltaY > self.SwitchSens and DownTarget and self:IsTargetInView(DownTarget) then
-                        self:SelectTarget(Target, DownTarget)
-                        self.Target = DownTarget
-                    end
-                end
-
-                --[[if MouseDeltaX > self.SwitchSens and RightTarget and self:IsTargetInView(RightTarget) then
-                    --print("Passed 390")
+                if MouseDeltaX > self.SwitchSens and RightTarget and self:IsTargetInView(RightTarget) then --Checking if MouseDeltaX is bigger than self.SwitchSens so if it's player is moving it's mouse to the right
                     self:SelectTarget(Target, RightTarget)
                     self.Target = RightTarget
-                elseif MouseDeltaX < -self.SwitchSens and LeftTarget and self:IsTargetInView(LeftTarget) then
+                elseif MouseDeltaX < -self.SwitchSens and LeftTarget and self:IsTargetInView(LeftTarget) then --Checking if MouseDeltaX is smaller than -self.SwitchSens so if it's player is moving it's mouse to the left
                     self:SelectTarget(Target, LeftTarget)
                     self.Target = LeftTarget
                 end
-                print(MouseDeltaX, MouseDeltaY)]]
-
             end
 
-            LastSwitchTime = time()
+            LastSwitchTime = time() --Updating LastSwitchTime
         end
     end)
 
 
-    self.Connections["DeathConnection"] = Humanoid.Died:Connect(function()
+    self.Connections["DeathConnection"] = Humanoid.Died:Connect(function() --If our player dies we stop LockSystem
         self:Stop()
     end)
 
 end
 
 
-function LockSystem:Stop()
+function LockSystem:Stop() --Function to stop LockSystem
 
-    for _, Connection in pairs(self.Connections) do
+    for _, Connection in pairs(self.Connections) do --Disconnecting all connections
         Connection:Disconnect()
         Connection = nil
     end
 
-    RunService:UnbindFromRenderStep("LockSystem")
+    RunService:UnbindFromRenderStep("LockSystem") --Unbinding LockSystem
 
-    self:SelectTarget(self.Target, nil)
+    self:SelectTarget(self.Target, nil) --Deleting our effects
 
-    UserInputService.MouseIconEnabled = true
-    UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+    UserInputService.MouseIconEnabled = true --Making mouse icon visible
+    UserInputService.MouseBehavior = Enum.MouseBehavior.Default --Setting mouse to defual settings
 
-    self.Camera.CameraType = Enum.CameraType.Custom
+    self.Camera.CameraType = Enum.CameraType.Custom --Setting camera to defual settings
 
-    self.Locked = false
+    self.Locked = false --Setting self.Locked to false
 
 end
 
