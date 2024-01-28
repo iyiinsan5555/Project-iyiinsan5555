@@ -32,7 +32,7 @@ RunService.Heartbeat:Connect(function()
         LastShakeTime = tick()
 
         if Humanoid.MoveDirection.Magnitude > 0 then
-            print(CharacterVelocity.Magnitude / 10)
+
             local ShakeInstance = CameraShakeInstance.new(CharacterVelocity.Magnitude / 15, 2, 0.1, 0.1)
             ShakeInstance.RotationInfluence = Vector3.new(0, 0, 0.5)
 

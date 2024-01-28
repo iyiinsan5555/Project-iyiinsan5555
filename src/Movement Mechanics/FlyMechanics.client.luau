@@ -71,9 +71,9 @@ local function StartFly()
     CustomVelocity.MaxSpeed = 50  -- Will be change relevant with players power (like fly speed)
     CustomVelocity.TweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 0, false, 0)
 
-    CustomVelocity.Changed:Connect(function(NewVelocity, PreviousVelocity)
+    --CustomVelocity.Changed:Connect(function(NewVelocity, PreviousVelocity)
         --print("New velocity: "..tostring(NewVelocity), " Old velocity: "..tostring(PreviousVelocity))
-    end)
+    --end)
 
     FlyConnection = RunService.Heartbeat:Connect(function()
 
